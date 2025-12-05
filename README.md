@@ -101,14 +101,9 @@ The batcher implements the Svelte store contract, allowing reactive subscription
 changes:
 
 ```typescript
-// Svelte component - auto-subscribe with $ syntax
-const batcher = new BatchFlusher(...);
-$: state = $batcher;
 // state.size, state.isRunning, state.isFlushing
-
-// Manual subscription
 const unsubscribe = batcher.subscribe((state) => {
-  console.log(`Items: ${state.size}, Running: ${state.isRunning}`);
+  console.log(state);
 });
 // Later: unsubscribe();
 ```
