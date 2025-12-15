@@ -1,4 +1,5 @@
 import { createPubSub } from "@marianmeres/pubsub";
+import { type Logger, withNamespace, createClog } from "@marianmeres/clog";
 
 /**
  * Reactive state exposed by BatchFlusher's subscribe method.
@@ -11,29 +12,6 @@ export interface BatchFlusherState {
 	isRunning: boolean;
 	/** Whether a flush operation is currently in progress */
 	isFlushing: boolean;
-}
-
-/**
- * Console-compatible logger interface.
- *
- * Defines standard logging methods that mirror the console API.
- * Used for custom logging integration with BatchFlusher.
- *
- * @example
- * ```ts
- * const logger: Logger = {
- *   debug: (...args) => console.debug('[DEBUG]', ...args),
- *   log: (...args) => console.log('[INFO]', ...args),
- *   warn: (...args) => console.warn('[WARN]', ...args),
- *   error: (...args) => console.error('[ERROR]', ...args),
- * };
- * ```
- */
-export interface Logger {
-	debug: (...args: unknown[]) => unknown;
-	log: (...args: unknown[]) => unknown;
-	warn: (...args: unknown[]) => unknown;
-	error: (...args: unknown[]) => unknown;
 }
 
 /**
@@ -73,12 +51,6 @@ export interface BatchFlusherConfig {
 	 * @default false
 	 */
 	strictFlush?: boolean;
-
-	/**
-	 * Enable verbose debug logging of internal events.
-	 * @default false
-	 */
-	debug?: boolean;
 
 	/**
 	 * Custom logger instance. Falls back to `console` if not provided.
@@ -134,20 +106,13 @@ export class BatchFlusher<T> {
 		flushIntervalMs: 1_000,
 		maxBatchSize: 100,
 		strictFlush: false,
-		debug: false,
 	};
 	#items: T[] = [];
 	#flushTimer: ReturnType<typeof setTimeout> | undefined;
 	#running: boolean = false;
 	#flushing: boolean = false;
 	#pubsub = createPubSub();
-
-	#debug(...args: unknown[]): void {
-		if (this.#config.debug) {
-			const logger = this.#config.logger ?? console;
-			logger.debug("[BatchFlusher]", ...args);
-		}
-	}
+	#logger: Logger;
 
 	/** Returns the current state snapshot for subscribers */
 	#getState(): BatchFlusherState {
@@ -178,6 +143,10 @@ export class BatchFlusher<T> {
 		autostart: boolean = true
 	) {
 		if (config) this.configure(config);
+		this.#logger = withNamespace(
+			this.#config.logger ?? createClog(),
+			"BatchFlusher"
+		);
 		autostart && this.start();
 	}
 
@@ -215,12 +184,14 @@ export class BatchFlusher<T> {
 	 */
 	add(item: T): void {
 		this.#items.push(item);
-		this.#debug(`add (size: ${this.#items.length})`);
+		this.#logger.debug(`add (size: ${this.#items.length})`);
 
 		// Safety cap: keep only the most recent maxBatchSize items
 		if (this.#items.length > this.#config.maxBatchSize) {
 			this.#items = this.#items.slice(-this.#config.maxBatchSize);
-			this.#debug(`maxBatchSize cap applied (size: ${this.#items.length})`);
+			this.#logger.debug(
+				`maxBatchSize cap applied (size: ${this.#items.length})`
+			);
 		}
 
 		this.#notify();
@@ -228,7 +199,9 @@ export class BatchFlusher<T> {
 		// Threshold trigger: flush immediately if threshold reached
 		const threshold = this.#config.flushThreshold;
 		if (threshold && this.#items.length >= threshold) {
-			this.#debug(`flushThreshold reached (${threshold}), flushing...`);
+			this.#logger.debug(
+				`flushThreshold reached (${threshold}), flushing...`
+			);
 			this.#doFlush();
 		}
 	}
@@ -263,17 +236,17 @@ export class BatchFlusher<T> {
 	 */
 	async flush(): Promise<boolean> {
 		if (!this.#items.length) {
-			this.#debug("flush skipped (empty)");
+			this.#logger.debug("flush skipped (empty)");
 			return true;
 		}
 		const items = [...this.#items];
 		this.#items = [];
 		this.#flushing = true;
 		this.#notify();
-		this.#debug(`flushing ${items.length} items...`);
+		this.#logger.debug(`flushing ${items.length} items...`);
 		try {
 			const result = await this._flusher(items);
-			this.#debug(`flush complete (result: ${result})`);
+			this.#logger.debug(`flush complete (result: ${result})`);
 			return result;
 		} finally {
 			this.#flushing = false;
@@ -312,7 +285,7 @@ export class BatchFlusher<T> {
 	 * Has no effect if `flushIntervalMs` is `0` or `undefined`.
 	 */
 	start(): void {
-		this.#debug("start");
+		this.#logger.debug("start");
 		this.#running = true;
 		this.#notify();
 		this.#scheduleFlush();
@@ -325,7 +298,7 @@ export class BatchFlusher<T> {
 	 * need to process remaining items.
 	 */
 	stop(): void {
-		this.#debug("stop");
+		this.#logger.debug("stop");
 		this.#running = false;
 		clearTimeout(this.#flushTimer);
 		this.#notify();
@@ -339,7 +312,7 @@ export class BatchFlusher<T> {
 	 * @returns The result of the final flush operation.
 	 */
 	async drain(): Promise<boolean> {
-		this.#debug("drain");
+		this.#logger.debug("drain");
 		const result = await this.flush();
 		this.stop();
 		return result;

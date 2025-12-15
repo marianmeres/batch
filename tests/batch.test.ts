@@ -1,6 +1,9 @@
-import { BatchFlusher, type Logger } from "../src/batch.ts";
+import { BatchFlusher } from "../src/batch.ts";
+import { createClog, type Logger } from "@marianmeres/clog";
 import { sleep } from "./sleep.ts";
 import { assertEquals, assertStringIncludes } from "@std/assert";
+
+createClog.global.debug = false;
 
 Deno.test("batch logger works", async () => {
 	let log: any[] = [];
@@ -137,16 +140,12 @@ Deno.test("debug mode logs events", async () => {
 		error: () => "",
 	};
 
-	const batch = new BatchFlusher(
-		() => Promise.resolve(true),
-		{
-			flushIntervalMs: 0,
-			flushThreshold: 2,
-			maxBatchSize: 100,
-			debug: true,
-			logger: mockLogger,
-		},
-	);
+	const batch = new BatchFlusher(() => Promise.resolve(true), {
+		flushIntervalMs: 0,
+		flushThreshold: 2,
+		maxBatchSize: 100,
+		logger: mockLogger,
+	});
 
 	batch.add("a");
 	batch.add("b"); // triggers threshold flush
@@ -236,7 +235,8 @@ Deno.test("isFlushing reflects flush state", async () => {
 });
 
 Deno.test("subscribe provides reactive state updates", async () => {
-	const states: { size: number; isRunning: boolean; isFlushing: boolean }[] = [];
+	const states: { size: number; isRunning: boolean; isFlushing: boolean }[] =
+		[];
 
 	const batch = new BatchFlusher<string>(
 		async () => {
