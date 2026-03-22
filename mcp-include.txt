@@ -1,0 +1,1 @@
+Generic batch processor that collects items and flushes them on configurable triggers (interval, item count threshold, or both). Provides safe buffering with max batch size cap, async flush, graceful shutdown via drain, and Svelte-compatible subscribe.
