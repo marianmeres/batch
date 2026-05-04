@@ -127,17 +127,17 @@ Deno.test("combined mode - flushes on whichever comes first", async () => {
 	batch.stop();
 });
 
-Deno.test("debug mode logs events", async () => {
-	const debugLogs: string[] = [];
-
+Deno.test("custom logger receives lifecycle events", async () => {
+	const logs: string[] = [];
+	const capture = (...args: unknown[]) => {
+		logs.push(args.join(" "));
+		return "";
+	};
 	const mockLogger: Logger = {
-		debug: (...args: unknown[]) => {
-			debugLogs.push(args.join(" "));
-			return "";
-		},
-		log: () => "",
-		warn: () => "",
-		error: () => "",
+		debug: capture,
+		log: capture,
+		warn: capture,
+		error: capture,
 	};
 
 	const batch = new BatchFlusher(() => Promise.resolve(true), {
@@ -151,11 +151,11 @@ Deno.test("debug mode logs events", async () => {
 	batch.add("b"); // triggers threshold flush
 	await sleep(5);
 
-	// Should have logged: start, add, add, threshold reached, flushing, flush complete
-	assertStringIncludes(debugLogs.join("|"), "start");
-	assertStringIncludes(debugLogs.join("|"), "add");
-	assertStringIncludes(debugLogs.join("|"), "flushThreshold reached");
-	assertStringIncludes(debugLogs.join("|"), "flushing 2 items");
+	const joined = logs.join("|");
+	assertStringIncludes(joined, "start");
+	assertStringIncludes(joined, "add");
+	assertStringIncludes(joined, "flushThreshold reached");
+	assertStringIncludes(joined, "flushing 2 items");
 
 	batch.stop();
 });
