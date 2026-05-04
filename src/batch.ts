@@ -168,7 +168,7 @@ export class BatchFlusher<T> {
 		config?: Partial<BatchFlusherConfig<T>>,
 		autostart: boolean = true,
 	) {
-		this.#logger = withNamespace(createClog(), "BatchFlusher");
+		this.#logger = createClog("BatchFlusher");
 		if (config) this.configure(config);
 		if (autostart) this.start();
 	}
