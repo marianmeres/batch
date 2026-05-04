@@ -166,7 +166,7 @@ export class BatchFlusher<T> {
 	constructor(
 		protected _flusher: (items: T[]) => Promise<boolean>,
 		config?: Partial<BatchFlusherConfig<T>>,
-		autostart: boolean = true
+		autostart: boolean = true,
 	) {
 		this.#logger = withNamespace(createClog(), "BatchFlusher");
 		if (config) this.configure(config);
@@ -212,7 +212,7 @@ export class BatchFlusher<T> {
 		const threshold = this.#config.flushThreshold;
 		if (threshold && this.#items.length >= threshold) {
 			this.#logger.debug(
-				`flushThreshold reached (${threshold}), flushing...`
+				`flushThreshold reached (${threshold}), flushing...`,
 			);
 			// Fire-and-forget; errors are handled inside #doFlush.
 			this.#doFlush();
@@ -289,9 +289,7 @@ export class BatchFlusher<T> {
 			this.#logger.debug(`flush complete (result: ${result})`);
 			return result;
 		} catch (e) {
-			this.#logger.debug(
-				`flush threw, requeuing ${items.length} items`
-			);
+			this.#logger.debug(`flush threw, requeuing ${items.length} items`);
 			// Only requeue if the buffer wasn't explicitly cleared mid-flight.
 			if (gen === this.#generation) {
 				this.#requeue(items);
@@ -322,7 +320,7 @@ export class BatchFlusher<T> {
 			this.#droppedCount += drop;
 			this.#items = this.#items.slice(drop);
 			this.#logger.debug(
-				`maxBatchSize cap applied (dropped: ${drop}, total: ${this.#droppedCount})`
+				`maxBatchSize cap applied (dropped: ${drop}, total: ${this.#droppedCount})`,
 			);
 			try {
 				this.#config.onDrop?.(dropped);
@@ -366,7 +364,7 @@ export class BatchFlusher<T> {
 			this.#logger.debug("start: already running");
 			return;
 		}
-		this.#logger.debug("start");
+		this.#logger.log("start");
 		this.#running = true;
 		this.#notify();
 		this.#scheduleFlush();
@@ -381,7 +379,7 @@ export class BatchFlusher<T> {
 			this.#logger.debug("stop: not running");
 			return;
 		}
-		this.#logger.debug("stop");
+		this.#logger.log("stop");
 		this.#running = false;
 		if (this.#flushTimer !== undefined) {
 			clearTimeout(this.#flushTimer);
@@ -398,7 +396,7 @@ export class BatchFlusher<T> {
 	 * `flush()` in a loop before `drain()`.
 	 */
 	async drain(): Promise<boolean> {
-		this.#logger.debug("drain");
+		this.#logger.log("drain");
 		const result = await this.flush();
 		this.stop();
 		return result;
@@ -419,7 +417,7 @@ export class BatchFlusher<T> {
 			(!Number.isFinite(config.maxBatchSize) || config.maxBatchSize <= 0)
 		) {
 			throw new RangeError(
-				`BatchFlusher: maxBatchSize must be a finite number > 0, got ${config.maxBatchSize}`
+				`BatchFlusher: maxBatchSize must be a finite number > 0, got ${config.maxBatchSize}`,
 			);
 		}
 		if (
@@ -428,7 +426,7 @@ export class BatchFlusher<T> {
 				config.flushIntervalMs < 0)
 		) {
 			throw new RangeError(
-				`BatchFlusher: flushIntervalMs must be a finite number >= 0, got ${config.flushIntervalMs}`
+				`BatchFlusher: flushIntervalMs must be a finite number >= 0, got ${config.flushIntervalMs}`,
 			);
 		}
 		if (
@@ -437,7 +435,7 @@ export class BatchFlusher<T> {
 				config.flushThreshold < 0)
 		) {
 			throw new RangeError(
-				`BatchFlusher: flushThreshold must be a finite number >= 0, got ${config.flushThreshold}`
+				`BatchFlusher: flushThreshold must be a finite number >= 0, got ${config.flushThreshold}`,
 			);
 		}
 
