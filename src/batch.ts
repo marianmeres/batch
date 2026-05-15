@@ -259,7 +259,7 @@ export class BatchFlusher<T> {
 		}
 
 		if (!this.#items.length) {
-			this.#logger.debug("flush skipped (empty)");
+			// this.#logger.debug("flush skipped (empty)"); // too much spam..
 			return true;
 		}
 
