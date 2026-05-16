@@ -1,5 +1,4 @@
 import { createPubSub } from "@marianmeres/pubsub";
-import { type Logger, withNamespace, createClog } from "@marianmeres/clog";
 
 /**
  * Reactive state exposed by BatchFlusher's subscribe method.
@@ -12,6 +11,42 @@ export interface BatchFlusherState {
 	isRunning: boolean;
 	/** Whether a flush operation is currently in progress */
 	isFlushing: boolean;
+}
+
+/**
+ * Minimal logger interface. Compatible with `console` and with
+ * `@marianmeres/clog`'s `Logger`. Pass any object with these four methods
+ * (e.g. `console`, or a `createClog("...")` instance) via `config.logger`.
+ */
+export interface Logger {
+	debug: (...args: unknown[]) => unknown;
+	log: (...args: unknown[]) => unknown;
+	warn: (...args: unknown[]) => unknown;
+	error: (...args: unknown[]) => unknown;
+}
+
+/**
+ * Default fallback logger. Quiet by default: `debug` and `log` are no-ops,
+ * `warn` / `error` go to `console`. Pass `logger: console` for full
+ * verbosity, or `logger: createClog(...)` from `@marianmeres/clog` for
+ * richer formatting.
+ */
+const defaultLogger: Logger = {
+	debug: () => {},
+	log: () => {},
+	warn: (...args) => console.warn(...args),
+	error: (...args) => console.error(...args),
+};
+
+/** Prefixes every call with `[ns]`. Replaces clog's `withNamespace`. */
+function withNamespace(logger: Logger, ns: string): Logger {
+	const tag = `[${ns}]`;
+	return {
+		debug: (...args) => logger.debug(tag, ...args),
+		log: (...args) => logger.log(tag, ...args),
+		warn: (...args) => logger.warn(tag, ...args),
+		error: (...args) => logger.error(tag, ...args),
+	};
 }
 
 /**
@@ -64,8 +99,11 @@ export interface BatchFlusherConfig<T = unknown> {
 	strictFlush?: boolean;
 
 	/**
-	 * Custom logger instance. Falls back to `createClog()` if not provided.
-	 * Can be updated at runtime via `configure({ logger })`.
+	 * Custom logger instance. Falls back to a quiet `console`-backed logger
+	 * (warn/error only; debug/log silenced). Pass `console` for full
+	 * verbosity, or a `createClog(...)` instance from `@marianmeres/clog`
+	 * for richer formatting. Can be updated at runtime via
+	 * `configure({ logger })`.
 	 */
 	logger?: Logger;
 
@@ -168,7 +206,7 @@ export class BatchFlusher<T> {
 		config?: Partial<BatchFlusherConfig<T>>,
 		autostart: boolean = true,
 	) {
-		this.#logger = createClog("BatchFlusher");
+		this.#logger = withNamespace(defaultLogger, "BatchFlusher");
 		if (config) this.configure(config);
 		if (autostart) this.start();
 	}

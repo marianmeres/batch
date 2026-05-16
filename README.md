@@ -111,6 +111,39 @@ batcher.isFlushing;    // a flush is in progress
 batcher.droppedCount;  // items discarded by maxBatchSize cap over lifetime
 ```
 
+## Logging
+
+`BatchFlusher` emits lifecycle events (start, add, flush, requeue, drop, etc.)
+through a small `Logger` interface — any object with `debug`, `log`, `warn`,
+and `error` methods. The default is a quiet `console`-backed logger:
+`warn` / `error` go to `console`, `debug` / `log` are silenced.
+
+```typescript
+import { BatchFlusher, type Logger } from "@marianmeres/batch";
+
+// Default: quiet (warn/error only)
+new BatchFlusher(flusher, { flushIntervalMs: 5000, maxBatchSize: 100 });
+
+// Verbose: route everything to console
+new BatchFlusher(flusher, {
+  flushIntervalMs: 5000,
+  maxBatchSize: 100,
+  logger: console,
+});
+
+// Richer formatting via @marianmeres/clog (now an explicit opt-in;
+// no longer a transitive dependency of batch):
+import { createClog } from "@marianmeres/clog";
+new BatchFlusher(flusher, {
+  flushIntervalMs: 5000,
+  maxBatchSize: 100,
+  logger: createClog("MyBatcher"),
+});
+```
+
+Pass anything `Logger`-shaped — your own structured logger, a test spy, etc.
+The logger may be swapped at runtime via `configure({ logger })`.
+
 ## Reactive Subscriptions (Svelte Store Compatible)
 
 ```typescript
@@ -179,6 +212,21 @@ behaviors have changed — see below.
 - **Removed docs-only `debug` config option.** It was documented in earlier
   versions of `API.md` / `AGENTS.md` but never implemented. Use a custom
   `logger` for verbose output.
+
+## Changes in 1.3.0
+
+- **`@marianmeres/clog` is no longer a dependency.** `BatchFlusher` now uses
+  a small built-in `Logger` interface and a quiet `console`-backed default
+  logger. Consumers who want clog formatting must add `@marianmeres/clog`
+  explicitly and pass `logger: createClog("...")`. See the
+  [Logging](#logging) section.
+- **`Logger` type is now exported from `@marianmeres/batch`.** Use it to
+  type custom loggers without depending on clog.
+- **Default logger behavior changed.** Previously the default was
+  `createClog("BatchFlusher")`, which printed via clog (and respected
+  `createClog.global.debug`). Now `debug` / `log` are silent by default and
+  `warn` / `error` go to `console`. Pass `logger: console` for full
+  verbosity, or a clog instance for the old behavior.
 
 ## License
 

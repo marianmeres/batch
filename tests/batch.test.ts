@@ -1,9 +1,6 @@
-import { BatchFlusher } from "../src/batch.ts";
-import { createClog, type Logger } from "@marianmeres/clog";
+import { BatchFlusher, type Logger } from "../src/batch.ts";
 import { sleep } from "./sleep.ts";
 import { assertEquals, assertStringIncludes } from "@std/assert";
-
-createClog.global.debug = false;
 
 Deno.test("batch logger works", async () => {
 	let log: any[] = [];
@@ -403,6 +400,45 @@ Deno.test("requeue preserves ordering when new items arrived during flight (B3)"
 
 	// Requeued [a,b] should be prepended to [c] — order preserved.
 	assertEquals(batch.dump().join(""), "abc");
+});
+
+Deno.test("works standalone with no logger injected (quiet default)", async () => {
+	// Stub console.warn / console.error to verify the default logger stays
+	// silent for the happy path (no warn/error level events expected here).
+	const origWarn = console.warn;
+	const origError = console.error;
+	const stdoutWarn: unknown[][] = [];
+	const stdoutError: unknown[][] = [];
+	console.warn = (...args) => stdoutWarn.push(args);
+	console.error = (...args) => stdoutError.push(args);
+
+	try {
+		const flushed: string[][] = [];
+		const batch = new BatchFlusher<string>(
+			(items) => {
+				flushed.push(items);
+				return Promise.resolve(true);
+			},
+			{ flushIntervalMs: 20, maxBatchSize: 10 }
+			// no logger — must work with built-in default
+		);
+
+		batch.add("a");
+		batch.add("b");
+		await sleep(40);
+
+		assertEquals(flushed.length, 1);
+		assertEquals(flushed[0].join(""), "ab");
+
+		await batch.drain();
+
+		// Default logger should not have emitted anything on the happy path.
+		assertEquals(stdoutWarn.length, 0);
+		assertEquals(stdoutError.length, 0);
+	} finally {
+		console.warn = origWarn;
+		console.error = origError;
+	}
 });
 
 Deno.test("concurrent flush calls are serialized (B4)", async () => {
