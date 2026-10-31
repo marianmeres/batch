@@ -21,11 +21,11 @@ configurable triggers.
 ## Installation
 
 ```bash
-# Deno
-deno add jsr:@marianmeres/batch
+npm i @marianmeres/batch
+```
 
-# Node.js
-npm install @marianmeres/batch
+```bash
+deno add jsr:@marianmeres/batch
 ```
 
 ## Quick Start
@@ -228,6 +228,37 @@ behaviors have changed — see below.
   `warn` / `error` go to `console`. Pass `logger: console` for full
   verbosity, or a clog instance for the old behavior.
 
+## Changes in 1.3.1
+
+No API or behavior change. The package is now developed on Node instead of Deno, and
+the npm package is built by `tsc`:
+
+- **`exports` uses the `default` condition** (was `import`), so `require()` resolves
+  the package too.
+- **`engines.node` is `>=24.12`.**
+- **The `.d.ts` files import each other as `./*.ts`** (was `./*.js`). TypeScript 5 and 7
+  resolve these under both `nodenext` and `bundler` module resolution.
+
+JSR still gets the `.ts` source, as before.
+
+## Development
+
+Node LTS (`.node-version`), pnpm, Biome, `node:test`. The source is erasable-only
+TypeScript that Node runs directly; `dist/` is built only for publishing to npm. JSR is
+served the `.ts` source (`jsr.json`).
+
+| Command                             | Does                                                     |
+| ----------------------------------- | -------------------------------------------------------- |
+| `pnpm install`                      | installs the dev tooling                                 |
+| `pnpm test` / `pnpm run test:watch` | `node --test` over `tests/**/*.test.ts`                  |
+| `pnpm run test:deno`                | the same suite on Deno, resolved as JSR consumers see it |
+| `pnpm run typecheck`                | `tsc --noEmit` over `src` and `tests`                    |
+| `pnpm run lint` / `pnpm run format` | `biome check .` read-only / with `--write`               |
+| `pnpm run ci`                       | typecheck + lint + test, what CI runs                    |
+| `pnpm run build`                    | `tsc -p tsconfig.build.json` → `dist/`                   |
+| `pnpm run jsr:check`                | `deno publish --dry-run` with the `package.json` version |
+| `pnpm run rp` / `pnpm run rpm`      | patch / minor release, then publish to npm and JSR       |
+
 ## License
 
-MIT
+[MIT](LICENSE)

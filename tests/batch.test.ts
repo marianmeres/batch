@@ -1,11 +1,13 @@
+import assert from "node:assert/strict";
+import process from "node:process";
+import { test } from "node:test";
 import { BatchFlusher, type Logger } from "../src/batch.ts";
 import { sleep } from "./sleep.ts";
-import { assertEquals, assertStringIncludes } from "@std/assert";
 
-Deno.test("batch logger works", async () => {
-	let log: any[] = [];
+test("batch logger works", async () => {
+	let log: string[][] = [];
 
-	const flusher = (data: any) => {
+	const flusher = (data: string[]) => {
 		log.push(data);
 		return Promise.resolve(true);
 	};
@@ -21,19 +23,19 @@ Deno.test("batch logger works", async () => {
 	batch.add("c");
 
 	// log must be empty not (flush interval not reached)
-	assertEquals(log.length, 0);
-	assertEquals(batch.size, 3);
+	assert.deepEqual(log.length, 0);
+	assert.deepEqual(batch.size, 3);
 
 	// sleep a little, but still not long enough to trigger flushing
 	await sleep(10);
-	assertEquals(log.length, 0);
-	assertEquals(batch.size, 3);
+	assert.deepEqual(log.length, 0);
+	assert.deepEqual(batch.size, 3);
 
 	// now sleep again to reach the flush threshold... log must be full
 	await sleep(15);
-	assertEquals(log.length, 1);
-	assertEquals(log[0].join(), ["a", "b", "c"].join());
-	assertEquals(batch.size, 0);
+	assert.deepEqual(log.length, 1);
+	assert.deepEqual(log[0]?.join(), ["a", "b", "c"].join());
+	assert.deepEqual(batch.size, 0);
 
 	// now test the max size
 	log = [];
@@ -46,12 +48,12 @@ Deno.test("batch logger works", async () => {
 	batch.add("e");
 
 	// "a" must not be in batch anymore (max size is 4)
-	assertEquals(batch.dump().join(""), "bcde");
+	assert.deepEqual(batch.dump().join(""), "bcde");
 
 	batch.stop();
 });
 
-Deno.test("amount mode - flushes at threshold", async () => {
+test("amount mode - flushes at threshold", async () => {
 	const log: string[][] = [];
 
 	const flusher = (data: string[]) => {
@@ -68,27 +70,27 @@ Deno.test("amount mode - flushes at threshold", async () => {
 
 	batch.add("a");
 	batch.add("b");
-	assertEquals(log.length, 0); // not yet at threshold
-	assertEquals(batch.size, 2);
+	assert.deepEqual(log.length, 0); // not yet at threshold
+	assert.deepEqual(batch.size, 2);
 
 	batch.add("c"); // triggers flush
 	await sleep(5); // allow async flush to complete
-	assertEquals(log.length, 1);
-	assertEquals(log[0].join(""), "abc");
-	assertEquals(batch.size, 0);
+	assert.deepEqual(log.length, 1);
+	assert.deepEqual(log[0]?.join(""), "abc");
+	assert.deepEqual(batch.size, 0);
 
 	// add more
 	batch.add("d");
 	batch.add("e");
 	batch.add("f"); // triggers flush again
 	await sleep(5);
-	assertEquals(log.length, 2);
-	assertEquals(log[1].join(""), "def");
+	assert.deepEqual(log.length, 2);
+	assert.deepEqual(log[1]?.join(""), "def");
 
 	batch.stop();
 });
 
-Deno.test("combined mode - flushes on whichever comes first", async () => {
+test("combined mode - flushes on whichever comes first", async () => {
 	const log: string[][] = [];
 
 	const flusher = (data: string[]) => {
@@ -105,11 +107,11 @@ Deno.test("combined mode - flushes on whichever comes first", async () => {
 	// Add 2 items, wait for interval to flush them
 	batch.add("a");
 	batch.add("b");
-	assertEquals(log.length, 0);
+	assert.deepEqual(log.length, 0);
 
 	await sleep(60);
-	assertEquals(log.length, 1);
-	assertEquals(log[0].join(""), "ab");
+	assert.deepEqual(log.length, 1);
+	assert.deepEqual(log[0]?.join(""), "ab");
 
 	// Now add 5 items quickly - should flush at threshold before interval
 	batch.add("c");
@@ -118,13 +120,13 @@ Deno.test("combined mode - flushes on whichever comes first", async () => {
 	batch.add("f");
 	batch.add("g"); // triggers threshold flush
 	await sleep(5);
-	assertEquals(log.length, 2);
-	assertEquals(log[1].join(""), "cdefg");
+	assert.deepEqual(log.length, 2);
+	assert.deepEqual(log[1]?.join(""), "cdefg");
 
 	batch.stop();
 });
 
-Deno.test("custom logger receives lifecycle events", async () => {
+test("custom logger receives lifecycle events", async () => {
 	const logs: string[] = [];
 	const capture = (...args: unknown[]) => {
 		logs.push(args.join(" "));
@@ -149,31 +151,31 @@ Deno.test("custom logger receives lifecycle events", async () => {
 	await sleep(5);
 
 	const joined = logs.join("|");
-	assertStringIncludes(joined, "start");
-	assertStringIncludes(joined, "add");
-	assertStringIncludes(joined, "flushThreshold reached");
-	assertStringIncludes(joined, "flushing 2 items");
+	assert.match(joined, /start/);
+	assert.match(joined, /add/);
+	assert.match(joined, /flushThreshold reached/);
+	assert.match(joined, /flushing 2 items/);
 
 	batch.stop();
 });
 
-Deno.test("isRunning reflects start/stop state", () => {
+test("isRunning reflects start/stop state", () => {
 	const batch = new BatchFlusher(
 		() => Promise.resolve(true),
 		{ flushIntervalMs: 100, maxBatchSize: 10 },
 		false // don't autostart
 	);
 
-	assertEquals(batch.isRunning, false);
+	assert.deepEqual(batch.isRunning, false);
 
 	batch.start();
-	assertEquals(batch.isRunning, true);
+	assert.deepEqual(batch.isRunning, true);
 
 	batch.stop();
-	assertEquals(batch.isRunning, false);
+	assert.deepEqual(batch.isRunning, false);
 });
 
-Deno.test("drain flushes and stops", async () => {
+test("drain flushes and stops", async () => {
 	const log: string[][] = [];
 
 	const batch = new BatchFlusher<string>(
@@ -184,25 +186,25 @@ Deno.test("drain flushes and stops", async () => {
 		{ flushIntervalMs: 1000, maxBatchSize: 100 }
 	);
 
-	assertEquals(batch.isRunning, true);
+	assert.deepEqual(batch.isRunning, true);
 
 	batch.add("a");
 	batch.add("b");
 	batch.add("c");
 
-	assertEquals(log.length, 0);
-	assertEquals(batch.size, 3);
+	assert.deepEqual(log.length, 0);
+	assert.deepEqual(batch.size, 3);
 
 	const result = await batch.drain();
 
-	assertEquals(result, true);
-	assertEquals(log.length, 1);
-	assertEquals(log[0].join(""), "abc");
-	assertEquals(batch.size, 0);
-	assertEquals(batch.isRunning, false);
+	assert.deepEqual(result, true);
+	assert.deepEqual(log.length, 1);
+	assert.deepEqual(log[0]?.join(""), "abc");
+	assert.deepEqual(batch.size, 0);
+	assert.deepEqual(batch.isRunning, false);
 });
 
-Deno.test("isFlushing reflects flush state", async () => {
+test("isFlushing reflects flush state", async () => {
 	let flushingDuringCallback = false;
 
 	const batch = new BatchFlusher<string>(
@@ -216,22 +218,22 @@ Deno.test("isFlushing reflects flush state", async () => {
 		false
 	);
 
-	assertEquals(batch.isFlushing, false);
+	assert.deepEqual(batch.isFlushing, false);
 
 	batch.add("a");
 	const flushPromise = batch.flush();
 
 	// Should be flushing now
-	assertEquals(batch.isFlushing, true);
+	assert.deepEqual(batch.isFlushing, true);
 
 	await flushPromise;
 
 	// Should be done flushing
-	assertEquals(batch.isFlushing, false);
-	assertEquals(flushingDuringCallback, true);
+	assert.deepEqual(batch.isFlushing, false);
+	assert.deepEqual(flushingDuringCallback, true);
 });
 
-Deno.test("subscribe provides reactive state updates", async () => {
+test("subscribe provides reactive state updates", async () => {
 	const states: { size: number; isRunning: boolean; isFlushing: boolean }[] =
 		[];
 
@@ -249,42 +251,42 @@ Deno.test("subscribe provides reactive state updates", async () => {
 	});
 
 	// Initial state should be captured immediately
-	assertEquals(states.length, 1);
-	assertEquals(states[0], { size: 0, isRunning: false, isFlushing: false });
+	assert.deepEqual(states.length, 1);
+	assert.deepEqual(states[0], { size: 0, isRunning: false, isFlushing: false });
 
 	// Start should notify
 	batch.start();
-	assertEquals(states.length, 2);
-	assertEquals(states[1].isRunning, true);
+	assert.deepEqual(states.length, 2);
+	assert.deepEqual(states[1]?.isRunning, true);
 
 	// Add items should notify
 	batch.add("a");
 	batch.add("b");
-	assertEquals(states.length, 4);
-	assertEquals(states[3].size, 2);
+	assert.deepEqual(states.length, 4);
+	assert.deepEqual(states[3]?.size, 2);
 
 	// Flush should notify (start and end)
 	const flushPromise = batch.flush();
-	assertEquals(states.length, 5);
-	assertEquals(states[4].isFlushing, true);
-	assertEquals(states[4].size, 0);
+	assert.deepEqual(states.length, 5);
+	assert.deepEqual(states[4]?.isFlushing, true);
+	assert.deepEqual(states[4]?.size, 0);
 
 	await flushPromise;
-	assertEquals(states.length, 6);
-	assertEquals(states[5].isFlushing, false);
+	assert.deepEqual(states.length, 6);
+	assert.deepEqual(states[5]?.isFlushing, false);
 
 	// Stop should notify
 	batch.stop();
-	assertEquals(states.length, 7);
-	assertEquals(states[6].isRunning, false);
+	assert.deepEqual(states.length, 7);
+	assert.deepEqual(states[6]?.isRunning, false);
 
 	// Unsubscribe should stop notifications
 	unsubscribe();
 	batch.add("c");
-	assertEquals(states.length, 7); // No new state captured
+	assert.deepEqual(states.length, 7); // No new state captured
 });
 
-Deno.test("stop during in-flight flush does not resurrect scheduler (B1)", async () => {
+test("stop during in-flight flush does not resurrect scheduler (B1)", async () => {
 	let flushCount = 0;
 	const batch = new BatchFlusher<string>(
 		async () => {
@@ -305,11 +307,11 @@ Deno.test("stop during in-flight flush does not resurrect scheduler (B1)", async
 
 	// Before the fix: scheduler re-armed itself after the in-flight flush,
 	// producing additional flush invocations despite stop().
-	assertEquals(batch.isRunning, false);
-	assertEquals(flushCount, 1);
+	assert.deepEqual(batch.isRunning, false);
+	assert.deepEqual(flushCount, 1);
 });
 
-Deno.test("double start is idempotent (B2)", async () => {
+test("double start is idempotent (B2)", async () => {
 	let flushCount = 0;
 	const batch = new BatchFlusher<string>(
 		() => {
@@ -329,10 +331,10 @@ Deno.test("double start is idempotent (B2)", async () => {
 	batch.stop();
 
 	// Without the guard, three overlapping timer chains would multiply flushes.
-	assertEquals(flushCount <= 3, true, `expected ≤3 flushes, got ${flushCount}`);
+	assert.deepEqual(flushCount <= 3, true, `expected ≤3 flushes, got ${flushCount}`);
 });
 
-Deno.test("items are requeued on flusher throw (B3)", async () => {
+test("items are requeued on flusher throw (B3)", async () => {
 	let attempts = 0;
 	const errors: unknown[] = [];
 
@@ -341,7 +343,7 @@ Deno.test("items are requeued on flusher throw (B3)", async () => {
 			attempts++;
 			if (attempts === 1) throw new Error("transient");
 			// Second attempt succeeds
-			assertEquals(items.join(""), "ab");
+			assert.deepEqual(items.join(""), "ab");
 			return true;
 		},
 		{
@@ -362,22 +364,22 @@ Deno.test("items are requeued on flusher throw (B3)", async () => {
 	} catch (e) {
 		caught = e;
 	}
-	assertEquals(String(caught), "Error: transient");
-	assertEquals(errors.length, 1);
+	assert.deepEqual(String(caught), "Error: transient");
+	assert.deepEqual(errors.length, 1);
 	// Items must be back in the buffer for retry.
-	assertEquals(batch.dump().join(""), "ab");
+	assert.deepEqual(batch.dump().join(""), "ab");
 
 	// Second flush succeeds with the requeued items.
 	const ok = await batch.flush();
-	assertEquals(ok, true);
-	assertEquals(attempts, 2);
-	assertEquals(batch.size, 0);
+	assert.deepEqual(ok, true);
+	assert.deepEqual(attempts, 2);
+	assert.deepEqual(batch.size, 0);
 });
 
-Deno.test("requeue preserves ordering when new items arrived during flight (B3)", async () => {
+test("requeue preserves ordering when new items arrived during flight (B3)", async () => {
 	let attempts = 0;
 	const batch = new BatchFlusher<string>(
-		async (items) => {
+		async () => {
 			attempts++;
 			if (attempts === 1) {
 				// Simulate new items arriving during the async flush
@@ -399,10 +401,10 @@ Deno.test("requeue preserves ordering when new items arrived during flight (B3)"
 	await p;
 
 	// Requeued [a,b] should be prepended to [c] — order preserved.
-	assertEquals(batch.dump().join(""), "abc");
+	assert.deepEqual(batch.dump().join(""), "abc");
 });
 
-Deno.test("works standalone with no logger injected (quiet default)", async () => {
+test("works standalone with no logger injected (quiet default)", async () => {
 	// Stub console.warn / console.error to verify the default logger stays
 	// silent for the happy path (no warn/error level events expected here).
 	const origWarn = console.warn;
@@ -427,21 +429,21 @@ Deno.test("works standalone with no logger injected (quiet default)", async () =
 		batch.add("b");
 		await sleep(40);
 
-		assertEquals(flushed.length, 1);
-		assertEquals(flushed[0].join(""), "ab");
+		assert.deepEqual(flushed.length, 1);
+		assert.deepEqual(flushed[0]?.join(""), "ab");
 
 		await batch.drain();
 
 		// Default logger should not have emitted anything on the happy path.
-		assertEquals(stdoutWarn.length, 0);
-		assertEquals(stdoutError.length, 0);
+		assert.deepEqual(stdoutWarn.length, 0);
+		assert.deepEqual(stdoutError.length, 0);
 	} finally {
 		console.warn = origWarn;
 		console.error = origError;
 	}
 });
 
-Deno.test("concurrent flush calls are serialized (B4)", async () => {
+test("concurrent flush calls are serialized (B4)", async () => {
 	const invocations: string[][] = [];
 	let concurrent = 0;
 	let maxConcurrent = 0;
@@ -469,12 +471,12 @@ Deno.test("concurrent flush calls are serialized (B4)", async () => {
 	await Promise.all([p1, p2, p3]);
 
 	// Flusher must never run in parallel with itself.
-	assertEquals(maxConcurrent, 1);
+	assert.deepEqual(maxConcurrent, 1);
 	// All items must have been processed.
-	assertEquals(invocations.flat().sort().join(""), "abc");
+	assert.deepEqual(invocations.flat().sort().join(""), "abc");
 });
 
-Deno.test("threshold flush during in-flight flush processes new items (B4)", async () => {
+test("threshold flush during in-flight flush processes new items (B4)", async () => {
 	const batches: string[][] = [];
 	const batch = new BatchFlusher<string>(
 		async (items) => {
@@ -494,22 +496,19 @@ Deno.test("threshold flush during in-flight flush processes new items (B4)", asy
 	batch.add("d"); // triggers second flush (queued behind first)
 	await sleep(50);
 
-	assertEquals(batches.length, 2);
-	assertEquals(batches[0].join(""), "ab");
-	assertEquals(batches[1].join(""), "cd");
+	assert.deepEqual(batches.length, 2);
+	assert.deepEqual(batches[0]?.join(""), "ab");
+	assert.deepEqual(batches[1]?.join(""), "cd");
 });
 
-Deno.test("strictFlush in timer path does not produce unhandled rejection (B5)", async () => {
-	let unhandled: unknown = undefined;
-	const handler = (e: PromiseRejectionEvent | { reason: unknown }) => {
-		unhandled = (e as PromiseRejectionEvent).reason ?? (e as { reason: unknown }).reason;
+test("strictFlush in timer path does not produce unhandled rejection (B5)", async () => {
+	let unhandled: unknown;
+	const handler = (reason: unknown) => {
+		unhandled = reason;
 	};
-	// Deno treats unhandled rejections as test failures, so if the bug re-appears
-	// this test will fail before we check `unhandled`.
-	globalThis.addEventListener?.(
-		"unhandledrejection",
-		handler as EventListener
-	);
+	// While a listener is attached the process does not crash on an unhandled
+	// rejection, so the bug, if it re-appears, shows up in `unhandled` instead.
+	process.on("unhandledRejection", handler);
 
 	const batch = new BatchFlusher<string>(
 		() => Promise.reject(new Error("boom")),
@@ -521,21 +520,18 @@ Deno.test("strictFlush in timer path does not produce unhandled rejection (B5)",
 	batch.stop();
 	await sleep(20);
 
-	globalThis.removeEventListener?.(
-		"unhandledrejection",
-		handler as EventListener
-	);
-	assertEquals(unhandled, undefined);
+	process.off("unhandledRejection", handler);
+	assert.deepEqual(unhandled, undefined);
 });
 
-Deno.test("configure({ logger }) updates active logger (B6)", async () => {
+test("configure({ logger }) updates active logger (B6)", async () => {
 	const logs1: string[] = [];
 	const logs2: string[] = [];
 	const mk = (sink: string[]): Logger => ({
-		debug: (...a) => (sink.push(`d:${a.join(" ")}`), ""),
-		log: (...a) => (sink.push(`l:${a.join(" ")}`), ""),
-		warn: (...a) => (sink.push(`w:${a.join(" ")}`), ""),
-		error: (...a) => (sink.push(`e:${a.join(" ")}`), ""),
+		debug: (...a) => sink.push(`d:${a.join(" ")}`),
+		log: (...a) => sink.push(`l:${a.join(" ")}`),
+		warn: (...a) => sink.push(`w:${a.join(" ")}`),
+		error: (...a) => sink.push(`e:${a.join(" ")}`),
 	});
 
 	const batch = new BatchFlusher<string>(
@@ -545,19 +541,19 @@ Deno.test("configure({ logger }) updates active logger (B6)", async () => {
 	);
 	batch.add("a");
 	const before = logs1.length;
-	assertEquals(before > 0, true);
+	assert.deepEqual(before > 0, true);
 
 	// Swap logger
 	batch.configure({ logger: mk(logs2) });
 	batch.add("b");
 
 	// logs1 should not have grown
-	assertEquals(logs1.length, before);
+	assert.deepEqual(logs1.length, before);
 	// logs2 should have captured the new add
-	assertEquals(logs2.length > 0, true);
+	assert.deepEqual(logs2.length > 0, true);
 });
 
-Deno.test("droppedCount and onDrop report lossy overflow (D1)", () => {
+test("droppedCount and onDrop report lossy overflow (D1)", () => {
 	const dropped: string[][] = [];
 	const batch = new BatchFlusher<string>(
 		() => Promise.resolve(true),
@@ -569,16 +565,16 @@ Deno.test("droppedCount and onDrop report lossy overflow (D1)", () => {
 		false
 	);
 
-	"abcde".split("").forEach((c) => batch.add(c));
+	for (const c of "abcde") batch.add(c);
 
-	assertEquals(batch.dump().join(""), "cde");
-	assertEquals(batch.droppedCount, 2);
-	assertEquals(dropped.length, 2); // one drop per overflow
-	assertEquals(dropped[0].join(""), "a");
-	assertEquals(dropped[1].join(""), "b");
+	assert.deepEqual(batch.dump().join(""), "cde");
+	assert.deepEqual(batch.droppedCount, 2);
+	assert.deepEqual(dropped.length, 2); // one drop per overflow
+	assert.deepEqual(dropped[0]?.join(""), "a");
+	assert.deepEqual(dropped[1]?.join(""), "b");
 });
 
-Deno.test("configure validates numeric inputs (D5)", () => {
+test("configure validates numeric inputs (D5)", () => {
 	const batch = new BatchFlusher<string>(
 		() => Promise.resolve(true),
 		{ flushIntervalMs: 0, maxBatchSize: 10 },
@@ -611,13 +607,13 @@ Deno.test("configure validates numeric inputs (D5)", () => {
 	} catch {
 		threw++;
 	}
-	assertEquals(threw, 5);
+	assert.deepEqual(threw, 5);
 
 	// Valid values must not throw
 	batch.configure({ flushIntervalMs: 0, flushThreshold: 0, maxBatchSize: 1 });
 });
 
-Deno.test("reset during in-flight flush suppresses requeue-on-error", async () => {
+test("reset during in-flight flush suppresses requeue-on-error", async () => {
 	const batch = new BatchFlusher<string>(
 		async () => {
 			await sleep(15);
@@ -636,6 +632,6 @@ Deno.test("reset during in-flight flush suppresses requeue-on-error", async () =
 	await p;
 
 	// Without the reset-generation check, requeue would put [a,b] back.
-	assertEquals(batch.size, 0);
+	assert.deepEqual(batch.size, 0);
 });
 

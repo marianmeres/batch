@@ -1,0 +1,71 @@
+{
+  "name": "@marianmeres/batch",
+  "version": "1.3.0",
+  "description": "Generic batch processor that collects items and flushes them on configurable triggers (interval, item count threshold, or both).",
+  "license": "MIT",
+  "author": "Marian Meres",
+  "type": "module",
+  "packageManager": "pnpm@12.16.1",
+  "engines": {
+    "node": ">=24.12"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "sideEffects": false,
+  "main": "./dist/mod.js",
+  "types": "./dist/mod.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/mod.d.ts",
+      "default": "./dist/mod.js"
+    }
+  },
+  "files": [
+    "dist",
+    "API.md",
+    "AGENTS.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/marianmeres/batch.git"
+  },
+  "bugs": {
+    "url": "https://github.com/marianmeres/batch/issues"
+  },
+  "homepage": "https://github.com/marianmeres/batch#readme",
+  "keywords": [
+    "batch",
+    "batching",
+    "buffer",
+    "flush",
+    "queue",
+    "svelte-store"
+  ],
+  "scripts": {
+    "build": "pnpm run clean && tsc -p tsconfig.build.json",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check .",
+    "format": "biome check --write .",
+    "test": "node --test \"tests/**/*.test.ts\"",
+    "test:watch": "node --test --watch \"tests/**/*.test.ts\"",
+    "test:deno": "deno test --no-check --no-lock --config jsr.json tests/",
+    "jsr:check": "deno publish --dry-run --allow-dirty --no-check --set-version \"$npm_package_version\"",
+    "ci": "pnpm run typecheck && pnpm run lint && pnpm test",
+    "prepublishOnly": "pnpm run ci && pnpm run build",
+    "release": "npx --yes @marianmeres/release@^2.2.0",
+    "publish:jsr": "pnpm run test:deno && deno publish --no-check --set-version \"$npm_package_version\"",
+    "publish:all": "pnpm publish && pnpm run publish:jsr",
+    "rp": "pnpm run release -y && pnpm run publish:all",
+    "rpm": "pnpm run release minor -y && pnpm run publish:all"
+  },
+  "dependencies": {
+    "@marianmeres/pubsub": "^3.0.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.6.3",
+    "@types/node": "^26.6.5",
+    "typescript": "^7.0.2"
+  }
+}

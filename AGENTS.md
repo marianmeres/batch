@@ -6,8 +6,42 @@ Machine-readable documentation for AI agents and code assistants.
 
 - **Name**: `@marianmeres/batch`
 - **Purpose**: Generic batch processor that collects items and flushes them on configurable triggers
-- **Runtime**: Deno (also published to npm)
-- **Entry Point**: `./src/mod.ts`
+- **Stack**: TypeScript (erasable-only), Node LTS (`.node-version`), pnpm, `node:test`, Biome
+- **Entry Point**: `./src/mod.ts` (npm: built to `dist/mod.js`)
+- **Registries**: npm (built `dist/`, from `package.json`) and JSR (the `.ts` source, from
+  `jsr.json`). JSR stays while Deno consumers exist; `package.json` holds the version.
+- **Install**: `pnpm install` | **Test**: `pnpm test` | **Check all**: `pnpm run ci` |
+  **Build**: `pnpm run build`
+
+## Critical Conventions
+
+1. **Runtime policy** — Node at the keyboard and in production, npm as the registry. No
+   `Deno.*`, `Bun.*`, `bun:*`, `jsr:` or `npm:` specifiers in source. Web standards first;
+   `node:*` where they don't reach. Nothing is built, tested or documented for Bun.
+2. **Erasable TypeScript** — no `enum`, `namespace`, constructor parameter properties;
+   `import type` for types; explicit `.ts` import extensions (rewritten to `.js` on emit).
+   Node strips types and never checks them: `pnpm run typecheck` is the only type gate.
+3. **Formatting** — tabs, 4 wide, 90 columns, double quotes (`biome.json`); manifests
+   (`package.json`, `jsr.json`) at 2 spaces. `pnpm run format` before committing;
+   `pnpm run lint` is the read-only check CI runs.
+4. **Tests** — `node:test` + `node:assert/strict`, importing `../src/*.ts`, never `dist`.
+   `pnpm run test:deno` runs the same suite on Deno with `jsr.json` as the config (the JSR
+   dependency graph); `publish:jsr` runs it first.
+5. **Publishing** — npm gets `dist` + `API.md` + `AGENTS.md` (`files`); JSR gets
+   `src/**/*.ts` and the docs (`jsr.json` `publish.include`). `pnpm publish` runs `ci` then
+   `build` via `prepublishOnly`. `pnpm run rp` / `rpm` (bump, commit, tag, push, then npm +
+   JSR) is a human action. `jsr.json` has no `version`: `publish:jsr` and `jsr:check` pass
+   `--set-version` from `package.json`, and `--no-check` (tsc is the type gate; the
+   slow-types check still runs).
+6. **Dependency `@marianmeres/pubsub`** — an npm dependency in `package.json` and a `jsr:`
+   import in `jsr.json`; keep both ranges in step.
+
+## Before Making Changes
+
+- [ ] Add or extend a test in `tests/`, then run `pnpm run ci`
+- [ ] Touching the public API or publish shape: also `pnpm run test:deno` and
+      `pnpm run jsr:check`
+- [ ] Keep this file, `README.md` and `API.md` in step with the code
 
 ## Exports
 
@@ -124,25 +158,32 @@ become unhandled promise rejections.
 
 ```
 src/
-  mod.ts          # Re-exports from batch.ts
-  batch.ts        # Main implementation
+  mod.ts               # Entry point; re-exports from batch.ts
+  batch.ts             # Main implementation
 tests/
-  batch.test.ts   # Unit tests (original + regression for bugs B1-B6, D1, D5)
-  sleep.ts        # Test utility
-scripts/
-  build-npm.ts    # npm build script
+  batch.test.ts        # node:test suite (original + regression for bugs B1-B6, D1, D5)
+  sleep.ts             # Test utility
+dist/                  # `pnpm run build` output; gitignored; what npm publishes
+package.json           # npm manifest of record (version, scripts, deps)
+jsr.json               # JSR config: exports, publish set, jsr: import of pubsub
+tsconfig.json          # type gate over src + tests (noEmit)
+tsconfig.build.json    # src → dist (ESM + .d.ts)
+biome.json             # format + lint
+.github/workflows/ci.yml  # Node only: `pnpm run ci`
 ```
 
-## Tasks
+## Commands
 
-```bash
-deno task test          # Run tests
-deno task test:watch    # Run tests in watch mode
-deno task npm:build     # Build npm package
-deno task npm:publish   # Build and publish to npm
-deno task publish       # Publish to JSR and npm
-deno task release       # Bump version
-```
+| Task                        | Command                                        |
+| --------------------------- | ---------------------------------------------- |
+| Run tests (Node)            | `pnpm test` / `pnpm run test:watch`            |
+| Run tests (Deno, JSR graph) | `pnpm run test:deno`                           |
+| Typecheck                   | `pnpm run typecheck`                           |
+| Lint / format               | `pnpm run lint` / `pnpm run format`            |
+| Everything CI runs          | `pnpm run ci`                                  |
+| Build `dist/`               | `pnpm run build`                               |
+| JSR publish dry run         | `pnpm run jsr:check`                           |
+| Release + publish npm & JSR | `pnpm run rp` (patch) / `pnpm run rpm` (minor) |
 
 ## Usage Patterns
 
@@ -193,13 +234,22 @@ batcher.configure({ logger: otherLogger });
 
 ## Testing Notes
 
+- `node:test` (`test(...)`) + `node:assert/strict`; index access in assertions uses `?.`
+  (`log[0]?.join("")`) to satisfy `noUncheckedIndexedAccess` without `!`.
 - Tests use `sleep()` helper for timing assertions.
 - Use short intervals (20ms) for fast execution.
-- Always call `stop()` or `drain()` at end of tests to cleanup timers.
+- Always call `stop()` or `drain()` at end of tests to cleanup timers. A running interval
+  re-arms itself, so a forgotten `stop()` keeps the Node test process alive; on Deno
+  (`test:deno`) the leak sanitizer fails the test.
 - Use `isRunning` to verify start/stop state.
 - Use `isFlushing` to check if flush is in progress.
 - Use `subscribe()` for reactive state testing (Svelte store compatible).
 - Regression tests for known bugs are labeled with tags (B1, B2, B3, B4, B5, B6, D1, D5) in `tests/batch.test.ts`.
+
+## Notes for 1.3.1 (off Deno)
+
+No API change. npm package now built by `tsc`: `exports` use the `default` condition (so
+`require()` resolves), `engines.node >=24.12`, `.d.ts` files import each other as `./*.ts`.
 
 ## BC Notes for 1.2.0
 

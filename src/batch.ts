@@ -179,6 +179,7 @@ export class BatchFlusher<T> {
 	#generation: number = 0;
 	#pubsub = createPubSub();
 	#logger: Logger;
+	protected _flusher: (items: T[]) => Promise<boolean>;
 
 	#getState(): BatchFlusherState {
 		return {
@@ -202,10 +203,11 @@ export class BatchFlusher<T> {
 	 * @param autostart - If `true` (default), starts auto-flushing immediately.
 	 */
 	constructor(
-		protected _flusher: (items: T[]) => Promise<boolean>,
+		flusher: (items: T[]) => Promise<boolean>,
 		config?: Partial<BatchFlusherConfig<T>>,
 		autostart: boolean = true,
 	) {
+		this._flusher = flusher;
 		this.#logger = withNamespace(defaultLogger, "BatchFlusher");
 		if (config) this.configure(config);
 		if (autostart) this.start();

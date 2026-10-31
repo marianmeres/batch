@@ -1,0 +1,10 @@
+{
+  "name": "@marianmeres/batch",
+  "exports": "./src/mod.ts",
+  "imports": {
+    "@marianmeres/pubsub": "jsr:@marianmeres/pubsub@^3.0.0"
+  },
+  "publish": {
+    "include": ["src/**/*.ts", "README.md", "API.md", "AGENTS.md", "LICENSE"]
+  }
+}
