@@ -251,9 +251,7 @@ export class BatchFlusher<T> {
 
 		const threshold = this.#config.flushThreshold;
 		if (threshold && this.#items.length >= threshold) {
-			this.#logger.debug(
-				`flushThreshold reached (${threshold}), flushing...`,
-			);
+			this.#logger.debug(`flushThreshold reached (${threshold}), flushing...`);
 			// Fire-and-forget; errors are handled inside #doFlush.
 			this.#doFlush();
 		}
@@ -462,8 +460,7 @@ export class BatchFlusher<T> {
 		}
 		if (
 			config.flushIntervalMs !== undefined &&
-			(!Number.isFinite(config.flushIntervalMs) ||
-				config.flushIntervalMs < 0)
+			(!Number.isFinite(config.flushIntervalMs) || config.flushIntervalMs < 0)
 		) {
 			throw new RangeError(
 				`BatchFlusher: flushIntervalMs must be a finite number >= 0, got ${config.flushIntervalMs}`,
@@ -471,8 +468,7 @@ export class BatchFlusher<T> {
 		}
 		if (
 			config.flushThreshold !== undefined &&
-			(!Number.isFinite(config.flushThreshold) ||
-				config.flushThreshold < 0)
+			(!Number.isFinite(config.flushThreshold) || config.flushThreshold < 0)
 		) {
 			throw new RangeError(
 				`BatchFlusher: flushThreshold must be a finite number >= 0, got ${config.flushThreshold}`,

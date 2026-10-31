@@ -35,14 +35,14 @@ import { BatchFlusher } from "@marianmeres/batch";
 
 // Create a batcher that flushes every 5 seconds
 const batcher = new BatchFlusher<string>(
-  async (items) => {
-    await sendToServer(items);
-    return true;
-  },
-  {
-    flushIntervalMs: 5000,
-    maxBatchSize: 1000,
-  }
+	async (items) => {
+		await sendToServer(items);
+		return true;
+	},
+	{
+		flushIntervalMs: 5000,
+		maxBatchSize: 1000,
+	},
 );
 
 batcher.add("event-1");
@@ -69,11 +69,11 @@ await batcher.drain();
 
 The flusher callback has three possible outcomes:
 
-| Return / behavior | Result |
-|-------------------|--------|
-| Returns `true`   | Success — items consumed |
-| Returns `false`  | Handled failure — items discarded, boolean propagated to caller, `onFlushError` **not** called |
-| Throws           | Unhandled failure — items are **requeued** at the head of the buffer (subject to `maxBatchSize`), `onFlushError` is called, and the error propagates from direct `flush()` / `drain()` calls |
+| Return / behavior | Result                                                                                                                                                                                       |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Returns `true`    | Success — items consumed                                                                                                                                                                     |
+| Returns `false`   | Handled failure — items discarded, boolean propagated to caller, `onFlushError` **not** called                                                                                               |
+| Throws            | Unhandled failure — items are **requeued** at the head of the buffer (subject to `maxBatchSize`), `onFlushError` is called, and the error propagates from direct `flush()` / `drain()` calls |
 
 Auto-triggered flushes (timer / threshold) always swallow errors — they log
 (warn level by default, error level if `strictFlush: true`) but never produce
@@ -81,16 +81,16 @@ unhandled promise rejections.
 
 ```typescript
 const batcher = new BatchFlusher<Event>(
-  async (items) => {
-    await send(items); // may throw
-    return true;
-  },
-  {
-    flushIntervalMs: 5000,
-    maxBatchSize: 1000,
-    onFlushError: (items, err) => metrics.incr("flush.failed", items.length),
-    onDrop: (items) => metrics.incr("flush.dropped", items.length),
-  }
+	async (items) => {
+		await send(items); // may throw
+		return true;
+	},
+	{
+		flushIntervalMs: 5000,
+		maxBatchSize: 1000,
+		onFlushError: (items, err) => metrics.incr("flush.failed", items.length),
+		onDrop: (items) => metrics.incr("flush.dropped", items.length),
+	},
 );
 ```
 
@@ -105,10 +105,10 @@ const batcher = new BatchFlusher<Event>(
 ## State Awareness
 
 ```typescript
-batcher.size;          // items currently buffered
-batcher.isRunning;     // interval scheduler is on
-batcher.isFlushing;    // a flush is in progress
-batcher.droppedCount;  // items discarded by maxBatchSize cap over lifetime
+batcher.size; // items currently buffered
+batcher.isRunning; // interval scheduler is on
+batcher.isFlushing; // a flush is in progress
+batcher.droppedCount; // items discarded by maxBatchSize cap over lifetime
 ```
 
 ## Logging
@@ -126,18 +126,18 @@ new BatchFlusher(flusher, { flushIntervalMs: 5000, maxBatchSize: 100 });
 
 // Verbose: route everything to console
 new BatchFlusher(flusher, {
-  flushIntervalMs: 5000,
-  maxBatchSize: 100,
-  logger: console,
+	flushIntervalMs: 5000,
+	maxBatchSize: 100,
+	logger: console,
 });
 
 // Richer formatting via @marianmeres/clog (now an explicit opt-in;
 // no longer a transitive dependency of batch):
 import { createClog } from "@marianmeres/clog";
 new BatchFlusher(flusher, {
-  flushIntervalMs: 5000,
-  maxBatchSize: 100,
-  logger: createClog("MyBatcher"),
+	flushIntervalMs: 5000,
+	maxBatchSize: 100,
+	logger: createClog("MyBatcher"),
 });
 ```
 
@@ -149,7 +149,7 @@ The logger may be swapped at runtime via `configure({ logger })`.
 ```typescript
 // state.size, state.isRunning, state.isFlushing
 const unsubscribe = batcher.subscribe((state) => {
-  console.log(state);
+	console.log(state);
 });
 ```
 

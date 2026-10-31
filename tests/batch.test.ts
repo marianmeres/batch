@@ -163,7 +163,7 @@ test("isRunning reflects start/stop state", () => {
 	const batch = new BatchFlusher(
 		() => Promise.resolve(true),
 		{ flushIntervalMs: 100, maxBatchSize: 10 },
-		false // don't autostart
+		false, // don't autostart
 	);
 
 	assert.deepEqual(batch.isRunning, false);
@@ -183,7 +183,7 @@ test("drain flushes and stops", async () => {
 			log.push(items);
 			return Promise.resolve(true);
 		},
-		{ flushIntervalMs: 1000, maxBatchSize: 100 }
+		{ flushIntervalMs: 1000, maxBatchSize: 100 },
 	);
 
 	assert.deepEqual(batch.isRunning, true);
@@ -215,7 +215,7 @@ test("isFlushing reflects flush state", async () => {
 			return true;
 		},
 		{ flushIntervalMs: 0, maxBatchSize: 10 },
-		false
+		false,
 	);
 
 	assert.deepEqual(batch.isFlushing, false);
@@ -234,8 +234,7 @@ test("isFlushing reflects flush state", async () => {
 });
 
 test("subscribe provides reactive state updates", async () => {
-	const states: { size: number; isRunning: boolean; isFlushing: boolean }[] =
-		[];
+	const states: { size: number; isRunning: boolean; isFlushing: boolean }[] = [];
 
 	const batch = new BatchFlusher<string>(
 		async () => {
@@ -243,7 +242,7 @@ test("subscribe provides reactive state updates", async () => {
 			return true;
 		},
 		{ flushIntervalMs: 0, maxBatchSize: 100 },
-		false // don't autostart
+		false, // don't autostart
 	);
 
 	const unsubscribe = batch.subscribe((state) => {
@@ -294,7 +293,7 @@ test("stop during in-flight flush does not resurrect scheduler (B1)", async () =
 			await sleep(30);
 			return true;
 		},
-		{ flushIntervalMs: 10, maxBatchSize: 10 }
+		{ flushIntervalMs: 10, maxBatchSize: 10 },
 	);
 
 	batch.add("a");
@@ -319,7 +318,7 @@ test("double start is idempotent (B2)", async () => {
 			return Promise.resolve(true);
 		},
 		{ flushIntervalMs: 15, maxBatchSize: 10 },
-		false
+		false,
 	);
 
 	batch.start();
@@ -351,7 +350,7 @@ test("items are requeued on flusher throw (B3)", async () => {
 			maxBatchSize: 10,
 			onFlushError: (_items, err) => errors.push(err),
 		},
-		false
+		false,
 	);
 
 	batch.add("a");
@@ -389,7 +388,7 @@ test("requeue preserves ordering when new items arrived during flight (B3)", asy
 			return true;
 		},
 		{ flushIntervalMs: 0, maxBatchSize: 10 },
-		false
+		false,
 	);
 
 	batch.add("a");
@@ -421,7 +420,7 @@ test("works standalone with no logger injected (quiet default)", async () => {
 				flushed.push(items);
 				return Promise.resolve(true);
 			},
-			{ flushIntervalMs: 20, maxBatchSize: 10 }
+			{ flushIntervalMs: 20, maxBatchSize: 10 },
 			// no logger — must work with built-in default
 		);
 
@@ -458,7 +457,7 @@ test("concurrent flush calls are serialized (B4)", async () => {
 			return true;
 		},
 		{ flushIntervalMs: 0, maxBatchSize: 100 },
-		false
+		false,
 	);
 
 	batch.add("a");
@@ -485,7 +484,7 @@ test("threshold flush during in-flight flush processes new items (B4)", async ()
 			return true;
 		},
 		{ flushIntervalMs: 0, flushThreshold: 2, maxBatchSize: 100 },
-		false
+		false,
 	);
 
 	batch.add("a");
@@ -510,10 +509,11 @@ test("strictFlush in timer path does not produce unhandled rejection (B5)", asyn
 	// rejection, so the bug, if it re-appears, shows up in `unhandled` instead.
 	process.on("unhandledRejection", handler);
 
-	const batch = new BatchFlusher<string>(
-		() => Promise.reject(new Error("boom")),
-		{ flushIntervalMs: 10, maxBatchSize: 10, strictFlush: true }
-	);
+	const batch = new BatchFlusher<string>(() => Promise.reject(new Error("boom")), {
+		flushIntervalMs: 10,
+		maxBatchSize: 10,
+		strictFlush: true,
+	});
 
 	batch.add("a");
 	await sleep(40);
@@ -537,7 +537,7 @@ test("configure({ logger }) updates active logger (B6)", async () => {
 	const batch = new BatchFlusher<string>(
 		() => Promise.resolve(true),
 		{ flushIntervalMs: 0, maxBatchSize: 10, logger: mk(logs1) },
-		false
+		false,
 	);
 	batch.add("a");
 	const before = logs1.length;
@@ -562,7 +562,7 @@ test("droppedCount and onDrop report lossy overflow (D1)", () => {
 			maxBatchSize: 3,
 			onDrop: (items) => dropped.push(items),
 		},
-		false
+		false,
 	);
 
 	for (const c of "abcde") batch.add(c);
@@ -578,7 +578,7 @@ test("configure validates numeric inputs (D5)", () => {
 	const batch = new BatchFlusher<string>(
 		() => Promise.resolve(true),
 		{ flushIntervalMs: 0, maxBatchSize: 10 },
-		false
+		false,
 	);
 
 	let threw = 0;
@@ -620,7 +620,7 @@ test("reset during in-flight flush suppresses requeue-on-error", async () => {
 			throw new Error("fail");
 		},
 		{ flushIntervalMs: 0, maxBatchSize: 10 },
-		false
+		false,
 	);
 
 	batch.add("a");
@@ -634,4 +634,3 @@ test("reset during in-flight flush suppresses requeue-on-error", async () => {
 	// Without the reset-generation check, requeue would put [a,b] back.
 	assert.deepEqual(batch.size, 0);
 });
-

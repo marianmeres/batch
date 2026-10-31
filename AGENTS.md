@@ -40,17 +40,17 @@ Machine-readable documentation for AI agents and code assistants.
 
 - [ ] Add or extend a test in `tests/`, then run `pnpm run ci`
 - [ ] Touching the public API or publish shape: also `pnpm run test:deno` and
-      `pnpm run jsr:check`
+  `pnpm run jsr:check`
 - [ ] Keep this file, `README.md` and `API.md` in step with the code
 
 ## Exports
 
 ```typescript
 export {
-  BatchFlusher,
-  BatchFlusherConfig,
-  BatchFlusherState,
-  Logger,
+	BatchFlusher,
+	BatchFlusherConfig,
+	BatchFlusherState,
+	Logger,
 } from "./src/mod.ts";
 ```
 
@@ -60,10 +60,10 @@ export {
 
 ```typescript
 interface Logger {
-  debug: (...args: unknown[]) => unknown;
-  log: (...args: unknown[]) => unknown;
-  warn: (...args: unknown[]) => unknown;
-  error: (...args: unknown[]) => unknown;
+	debug: (...args: unknown[]) => unknown;
+	log: (...args: unknown[]) => unknown;
+	warn: (...args: unknown[]) => unknown;
+	error: (...args: unknown[]) => unknown;
 }
 ```
 
@@ -71,13 +71,13 @@ interface Logger {
 
 ```typescript
 interface BatchFlusherConfig<T = unknown> {
-  flushIntervalMs?: number;    // default 1000, 0 disables, must be finite >= 0
-  maxBatchSize: number;        // default 100, safety cap, must be finite > 0
-  flushThreshold?: number;     // default undefined, set to enable amount mode, must be finite >= 0
-  strictFlush?: boolean;       // default false — auto-flush error log level (true=error, false=warn)
-  logger?: Logger;             // default createClog(); runtime-updatable via configure()
-  onFlushError?: (items: T[], err: unknown) => void; // called when flusher throws
-  onDrop?: (items: T[]) => void;                     // called on maxBatchSize overflow
+	flushIntervalMs?: number; // default 1000, 0 disables, must be finite >= 0
+	maxBatchSize: number; // default 100, safety cap, must be finite > 0
+	flushThreshold?: number; // default undefined, set to enable amount mode, must be finite >= 0
+	strictFlush?: boolean; // default false — auto-flush error log level (true=error, false=warn)
+	logger?: Logger; // default createClog(); runtime-updatable via configure()
+	onFlushError?: (items: T[], err: unknown) => void; // called when flusher throws
+	onDrop?: (items: T[]) => void; // called on maxBatchSize overflow
 }
 ```
 
@@ -85,9 +85,9 @@ interface BatchFlusherConfig<T = unknown> {
 
 ```typescript
 interface BatchFlusherState {
-  size: number;        // Current buffer size
-  isRunning: boolean;  // Auto-flushing active
-  isFlushing: boolean; // Flush in progress
+	size: number; // Current buffer size
+	isRunning: boolean; // Auto-flushing active
+	isFlushing: boolean; // Flush in progress
 }
 ```
 
@@ -122,21 +122,21 @@ class BatchFlusher<T> {
 
 ## Flush Modes
 
-| Mode | flushIntervalMs | flushThreshold | Behavior |
-|------|-----------------|----------------|----------|
-| Interval | > 0 | undefined/0 | Flush at fixed intervals |
-| Amount | 0/undefined | > 0 | Flush at item count threshold |
-| Combined | > 0 | > 0 | Flush on whichever fires first |
+| Mode     | flushIntervalMs | flushThreshold | Behavior                       |
+| -------- | --------------- | -------------- | ------------------------------ |
+| Interval | > 0             | undefined/0    | Flush at fixed intervals       |
+| Amount   | 0/undefined     | > 0            | Flush at item count threshold  |
+| Combined | > 0             | > 0            | Flush on whichever fires first |
 
 ## Failure Semantics (important)
 
 Flusher `(items) => Promise<boolean>` has three outcomes:
 
-| Outcome | Items | `onFlushError` | Direct `flush()` caller sees |
-|---------|-------|----------------|------------------------------|
-| returns `true` | consumed | not called | resolves to `true` |
-| returns `false` | discarded | **not** called | resolves to `false` |
-| throws | **requeued** at head (subject to `maxBatchSize`) | called with `(items, err)` | rejects |
+| Outcome         | Items                                            | `onFlushError`             | Direct `flush()` caller sees |
+| --------------- | ------------------------------------------------ | -------------------------- | ---------------------------- |
+| returns `true`  | consumed                                         | not called                 | resolves to `true`           |
+| returns `false` | discarded                                        | **not** called             | resolves to `false`          |
+| throws          | **requeued** at head (subject to `maxBatchSize`) | called with `(items, err)` | rejects                      |
 
 Auto-triggered flushes (timer / threshold) always swallow errors after logging.
 `strictFlush` only controls log severity (`error` vs `warn`). Errors never
@@ -191,8 +191,11 @@ biome.json             # format + lint
 
 ```typescript
 const batcher = new BatchFlusher<T>(
-  async (items) => { await process(items); return true; },
-  { flushIntervalMs: 5000, maxBatchSize: 1000 }
+	async (items) => {
+		await process(items);
+		return true;
+	},
+	{ flushIntervalMs: 5000, maxBatchSize: 1000 },
 );
 batcher.add(item);
 await batcher.drain(); // graceful shutdown
@@ -202,24 +205,24 @@ await batcher.drain(); // graceful shutdown
 
 ```typescript
 const batcher = new BatchFlusher<T>(
-  async (items) => { await process(items); return true; },
-  { flushIntervalMs: 0, flushThreshold: 100, maxBatchSize: 500 }
+	async (items) => {
+		await process(items);
+		return true;
+	},
+	{ flushIntervalMs: 0, flushThreshold: 100, maxBatchSize: 500 },
 );
 ```
 
 ### With Observability Hooks
 
 ```typescript
-const batcher = new BatchFlusher<T>(
-  flusher,
-  {
-    maxBatchSize: 1000,
-    flushIntervalMs: 5000,
-    onFlushError: (items, err) => metrics.incr("flush.failed", items.length),
-    onDrop: (items) => metrics.incr("flush.dropped", items.length),
-    strictFlush: true, // log at error level
-  }
-);
+const batcher = new BatchFlusher<T>(flusher, {
+	maxBatchSize: 1000,
+	flushIntervalMs: 5000,
+	onFlushError: (items, err) => metrics.incr("flush.failed", items.length),
+	onDrop: (items) => metrics.incr("flush.dropped", items.length),
+	strictFlush: true, // log at error level
+});
 // Later:
 if (batcher.droppedCount > 0) alert("data loss");
 ```

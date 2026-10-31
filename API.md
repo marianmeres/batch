@@ -6,11 +6,11 @@ A generic batch processor that collects items and flushes them based on configur
 
 ### Flush Modes
 
-| Mode | Configuration | Behavior |
-|------|---------------|----------|
-| **Interval** | Only `flushIntervalMs` set | Flushes at fixed time intervals |
-| **Amount** | Only `flushThreshold` set | Flushes when item count reaches threshold |
-| **Combined** | Both set | Flushes on whichever trigger fires first |
+| Mode         | Configuration              | Behavior                                  |
+| ------------ | -------------------------- | ----------------------------------------- |
+| **Interval** | Only `flushIntervalMs` set | Flushes at fixed time intervals           |
+| **Amount**   | Only `flushThreshold` set  | Flushes when item count reaches threshold |
+| **Combined** | Both set                   | Flushes on whichever trigger fires first  |
 
 ### Constructor
 
@@ -22,11 +22,11 @@ new BatchFlusher<T>(
 )
 ```
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `flusher` | `(items: T[]) => Promise<boolean>` | required | Async callback invoked with batched items. See [Failure Semantics](#failure-semantics). |
-| `config` | `Partial<BatchFlusherConfig<T>>` | `{}` | Configuration overrides |
-| `autostart` | `boolean` | `true` | If `true`, starts auto-flushing immediately |
+| Parameter   | Type                               | Default  | Description                                                                             |
+| ----------- | ---------------------------------- | -------- | --------------------------------------------------------------------------------------- |
+| `flusher`   | `(items: T[]) => Promise<boolean>` | required | Async callback invoked with batched items. See [Failure Semantics](#failure-semantics). |
+| `config`    | `Partial<BatchFlusherConfig<T>>`   | `{}`     | Configuration overrides                                                                 |
+| `autostart` | `boolean`                          | `true`   | If `true`, starts auto-flushing immediately                                             |
 
 ### Properties
 
@@ -126,11 +126,11 @@ Subscribes to state changes. Svelte store compatible.
 
 The flusher callback `(items: T[]) => Promise<boolean>` has three possible outcomes:
 
-| Outcome | Effect on items | `onFlushError` | `flush()` caller receives |
-|---------|-----------------|----------------|---------------------------|
-| Returns `true` | Consumed | Not called | `true` |
-| Returns `false` | Discarded | **Not** called | `false` |
-| Throws | **Requeued** at head of buffer (subject to `maxBatchSize`) | Called with `(items, error)` | Error rethrown |
+| Outcome         | Effect on items                                            | `onFlushError`               | `flush()` caller receives |
+| --------------- | ---------------------------------------------------------- | ---------------------------- | ------------------------- |
+| Returns `true`  | Consumed                                                   | Not called                   | `true`                    |
+| Returns `false` | Discarded                                                  | **Not** called               | `false`                   |
+| Throws          | **Requeued** at head of buffer (subject to `maxBatchSize`) | Called with `(items, error)` | Error rethrown            |
 
 Auto-triggered flushes (timer, threshold) always catch errors. `strictFlush`
 controls log severity only:
@@ -147,9 +147,9 @@ Reactive state exposed by `subscribe`.
 
 ```typescript
 interface BatchFlusherState {
-  size: number;        // Current number of items in the buffer
-  isRunning: boolean;  // Whether automatic interval-based flushing is active
-  isFlushing: boolean; // Whether a flush operation is currently in progress
+	size: number; // Current number of items in the buffer
+	isRunning: boolean; // Whether automatic interval-based flushing is active
+	isFlushing: boolean; // Whether a flush operation is currently in progress
 }
 ```
 
@@ -159,25 +159,25 @@ interface BatchFlusherState {
 
 ```typescript
 interface BatchFlusherConfig<T = unknown> {
-  flushIntervalMs?: number;
-  maxBatchSize: number;
-  flushThreshold?: number;
-  strictFlush?: boolean;
-  logger?: Logger;
-  onFlushError?: (items: T[], error: unknown) => void;
-  onDrop?: (items: T[]) => void;
+	flushIntervalMs?: number;
+	maxBatchSize: number;
+	flushThreshold?: number;
+	strictFlush?: boolean;
+	logger?: Logger;
+	onFlushError?: (items: T[], error: unknown) => void;
+	onDrop?: (items: T[]) => void;
 }
 ```
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `flushIntervalMs` | `number` | `1000` | Flush interval in ms. `0` disables. Must be finite, `>= 0`. |
-| `maxBatchSize` | `number` | `100` | Max items to keep (safety cap). Oldest discarded when exceeded. Must be finite, `> 0`. |
-| `flushThreshold` | `number` | `undefined` | Flush immediately when this count is reached. `0` or `undefined` disables. Must be finite, `>= 0`. |
-| `strictFlush` | `boolean` | `false` | If `true`, auto-flush errors log at `error` level instead of `warn`. |
-| `logger` | `Logger` | `createClog()` | Custom logger. Can be changed at runtime via `configure`. |
-| `onFlushError` | `(items, err) => void` | — | Called when the flusher throws. Items are also requeued. |
-| `onDrop` | `(items) => void` | — | Called when items are discarded due to `maxBatchSize`. |
+| Option            | Type                   | Default        | Description                                                                                        |
+| ----------------- | ---------------------- | -------------- | -------------------------------------------------------------------------------------------------- |
+| `flushIntervalMs` | `number`               | `1000`         | Flush interval in ms. `0` disables. Must be finite, `>= 0`.                                        |
+| `maxBatchSize`    | `number`               | `100`          | Max items to keep (safety cap). Oldest discarded when exceeded. Must be finite, `> 0`.             |
+| `flushThreshold`  | `number`               | `undefined`    | Flush immediately when this count is reached. `0` or `undefined` disables. Must be finite, `>= 0`. |
+| `strictFlush`     | `boolean`              | `false`        | If `true`, auto-flush errors log at `error` level instead of `warn`.                               |
+| `logger`          | `Logger`               | `createClog()` | Custom logger. Can be changed at runtime via `configure`.                                          |
+| `onFlushError`    | `(items, err) => void` | —              | Called when the flusher throws. Items are also requeued.                                           |
+| `onDrop`          | `(items) => void`      | —              | Called when items are discarded due to `maxBatchSize`.                                             |
 
 ---
 
@@ -187,10 +187,10 @@ Console-compatible logger interface.
 
 ```typescript
 interface Logger {
-  debug: (...args: unknown[]) => unknown;
-  log: (...args: unknown[]) => unknown;
-  warn: (...args: unknown[]) => unknown;
-  error: (...args: unknown[]) => unknown;
+	debug: (...args: unknown[]) => unknown;
+	log: (...args: unknown[]) => unknown;
+	warn: (...args: unknown[]) => unknown;
+	error: (...args: unknown[]) => unknown;
 }
 ```
 
